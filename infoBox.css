@@ -1,0 +1,23 @@
+.infobox {
+	position: absolute;
+	width: auto;
+	height: auto;
+	background-color: black;
+	border-radius: 20px;
+	z-index: 10;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+}
+
+.infobox .title {
+	padding: 10px;
+	text-align: center;
+	color: white;
+}
+
+.infobox .content {
+	margin: 10px;
+	padding: 10px;
+	color: white;
+}

@@ -154,16 +154,16 @@ class Renderer {
 		if(humanCanvasPos.y > this.canvas.height) return
 		if(humanCanvasPos.y < 0) return
 
-		this.ctx.drawImage(asset, humanCanvasPos.x, humanCanvasPos.y, zoomValue/4, zoomValue/4)
+		this.ctx.drawImage(asset, humanCanvasPos.x-zoomValue/(4*2), humanCanvasPos.y-zoomValue/(4*2), zoomValue/4, zoomValue/4)
 
-		if(human.walking.path && this.camera.zoomValue > this.viewChange) {
+		if(human.walking.path && this.camera.zoomValue > this.viewChange && human.nation && human.nation.citizens.length < 100) {
 			let path = human.walking.path
 			this.ctx.strokeStyle = 'rgb(0, 0, 255)'
 			this.ctx.beginPath()
-			this.ctx.lineWidth = 5
+			this.ctx.lineWidth = 2
 			for(let i in path) {
 				let seg = path[i]
-				let screenPos = this.gridToWindowPos(new Vector(seg.x, seg.y))
+				let screenPos = this.gridToWindowPos(new Vector(seg.x, seg.y).add(new Vector(0.5, 0.5)))
 				if(i == 0) this.ctx.moveTo(screenPos.x, screenPos.y)
 				else this.ctx.lineTo(screenPos.x, screenPos.y)
 			}
@@ -191,6 +191,8 @@ class Renderer {
 		// draw building
 		if(tile.building) {
 			let asset = assets.images[tile.building.type]
+
+			if(tile.building.type == 'house' && tile.building.level == 1) asset = assets.images['hut']
 
 			let buildingCanvasPos = tile.pos.clone().subtract(camera.pos).multiply(zoomValue)
 			ctx.drawImage(asset, buildingCanvasPos.x, buildingCanvasPos.y, zoomValue, zoomValue)

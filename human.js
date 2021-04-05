@@ -19,8 +19,8 @@ class Human {
 		this.mating = {
 			partner: null,
 			mateReady: false,
-			mateCooldownMax: 2*50*(Math.random()*2),
-			mateCooldown: 4*50*(Math.random()*2)
+			mateCooldownMax: 20*50*(Math.random()*2),
+			mateCooldown: 20*50*(Math.random()*2)
 		}
 		this.home = null
 		this.building = {
@@ -152,6 +152,7 @@ class Human {
 					let result = await game.grid.findClosestEmptyTile(this.pos.clone().floor())
 					this.status = 'walking'
 					this.walking.designationGoal = 'building'
+					this.building.what = 'house'
 					this.walking.designation = result.target
 					this.walking.path = result.path
 				}
@@ -160,7 +161,10 @@ class Human {
 
 
 			// mate
-			else if(this.mating.mateCooldown < 0 && (Math.random() > 0.9 || (this.mating.partner && this.mating.partner.status == 'mating')) && this.home != null) {
+			else if(this.mating.mateCooldown < 0 
+				&& (Math.random() > 0.9 || (this.mating.partner && this.mating.partner.status == 'mating')) 
+				&& this.home != null
+				&& this.saturation > 90) {
 
 				this.mating.mateReady = true
 				
@@ -184,8 +188,18 @@ class Human {
 
 			}
 
+			// make buildings
+			else if(Math.random() > 0.9 && this.nation.citizens.length/20 > this.nation.buildingAmountType('wheatfarm') && this.nation.resources.food < 1000) {
+				let result = await game.grid.findClosestEmptyTile(this.pos.clone().floor())
+				this.status = 'walking'
+				this.walking.designationGoal = 'building'
+				this.building.what = 'wheatfarm'
+				this.walking.designation = result.target
+				this.walking.path = result.path
+			}
+
 			// get resources
-			else if(Math.random() > 0.99) {
+			else if(Math.random() > 0.9) {
 
 				this.status = 'walking'
 				let pathFindingResult
@@ -244,7 +258,7 @@ class Human {
 			let path = this.walking.path
 
 			if(path == null || path.length == 0) {
-				this.status = this.walking.designationGoal
+				if(this.walking.designationGoal) this.status = this.walking.designationGoal
 				this.statusProgress = 0
 				return
 			}
@@ -256,7 +270,7 @@ class Human {
 			let movement = new Vector(0, 0)
 
 
-			let segment = path[0]
+			let segment = path[0].clone().add(new Vector(0.5, 0.5))
 			if(!segment) return path = null
 			let targetToPlayerVec = this.pos.clone().subtract(this.pos)
 			movement = new Vector(segment.x, segment.y).subtract(this.pos).add(targetToPlayerVec.setMagnitude(0.1))
@@ -373,11 +387,29 @@ class Human {
 			}
 
 			if(this.statusProgress > 100) {
-				buildingTile.building = new House(buildingTile.pos, this.nation)
-				this.nation.resources.wood -= 10
+
+				if(this.building.what == 'house') {
+					buildingTile.building = new House(buildingTile.pos, this.nation)
+	
+					this.home = buildingTile.building
+					buildingTile.building.inhabitants.push(this)
+				}
+
+				else if(this.building.what == 'wheatfarm') {
+					buildingTile.building = new WheatFarm(buildingTile.pos, this.nation)
+
+				}
+
+				else return
+
+
+				// remove cost of building
+				let cost = buildingTile.building.cost
+
+				if(cost.wood) this.nation.resources.wood -= cost.wood
+				if(cost.stone) this.nation.resources.stone -= cost.stone
+
 				this.status = null
-				this.home = buildingTile.building
-				buildingTile.building.inhabitants.push(this)
 
 				// if in new chunk, add chunk to nation
 				let nation = game.getNationOnPosition(buildingTile.pos)

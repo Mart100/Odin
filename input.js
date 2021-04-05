@@ -29,10 +29,45 @@ $(() => {
 
 		if(event.which == 1) {
 
+			let infoboxes = $('.infobox')
+
+			if(infoboxes.length > 0) $('.infobox')[0].remove()
+
 			if(selectedTool == 'humanadd') {
 				let pos = game.input.mouseTileHover.clone().floor()
 
 				let human = new Human(pos)
+			}
+
+			else if(selectedTool == 'info') {
+
+				// big view -- show nation info
+				if(game.renderer.camera.zoomValue < game.renderer.viewChange) {
+
+					let nation = game.getNationOnPosition(game.input.mouseTileHover.clone().floor())
+
+					if(!nation) return
+	
+					let infoBox = new Infobox()
+	
+					infoBox.setTitle(nation.name)
+	
+					infoBox.setContent(`
+					<div>Population: ${nation.citizens.length}</div>
+					<div>Chunks: ${nation.chunks.length}</div>
+					<div>Wheatfarms: ${nation.buildings.map(b => b.type=='wheatfarm').reduce((a, b) => a+b)}</div>
+					<div>Houses: ${nation.buildings.map(b => b.type=='house').reduce((a, b) => a+b)}</div>
+					<div>Inventory:</div>
+					<div>Stone: ${nation.resources.stone}</div>
+					<div>Wood: ${nation.resources.wood}</div>
+					<div>Food: ${Math.round(nation.resources.food*100)/100}</div>
+					`)
+	
+					infoBox.show()
+
+				}
+
+
 			}
 
 		}

@@ -4,7 +4,8 @@ let assets = {
     tree: 'assets/tree.png',
     rock: 'assets/rock.png',
     hut: 'assets/hut.png',
-    wheat: 'assets/wheat.png'
+    wheat: 'assets/wheat.png',
+    wheatfarm: 'assets/wheatfarm.png',
   },
   sounds: {
     example: './assets/sounds/example.mp3',

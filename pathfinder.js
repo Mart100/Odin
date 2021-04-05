@@ -159,6 +159,7 @@ class Pathfinder {
 		let gData = game.grid.data
 		let posArr = [[-1, 0], [0, -1], [1, 0], [0, 1]]
 		//let posArr = [[-1, 0], [-1, -1], [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1]]
+		//let posArr = [[-1, -1], [1, -1], [1, 1],  [-1, 1]]
 		let x = pos.x
 		let y = pos.y
 		for(let i=0;i<4;i++) {

@@ -21,6 +21,16 @@ class Nation {
 		this.citizens.push(human)
 	}
 
+	buildingAmountType(type) {
+
+		let map = this.buildings.map(b => b.type==type)
+
+		if(map.length == 0) return 0
+
+		let amount = map.reduce((a, b) => a+b)
+		return amount
+	}
+
 	randomName() {
 		let name = ''
 		let vowels = 'aeiouy'
