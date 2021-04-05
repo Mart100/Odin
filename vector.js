@@ -108,6 +108,18 @@ class Vector {
 	dotProduct(vec1) {
 		return this.x*vec1.x + this.y*vec1.y
 	}
+	round() {
+		this.x = Math.round(this.x)
+		this.y = Math.round(this.y)
+
+		return this
+	}
+	floor() {
+		this.x = Math.floor(this.x)
+		this.y = Math.floor(this.y)
+
+		return this
+	}
 	clone() {
 		return new Vector(this.x, this.y)
 	}

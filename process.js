@@ -1,7 +1,7 @@
 class Process {
 	constructor() {
 		this.interval
-		this.tickRate = 1000/20
+		this.tickRate = 1000/50
 
 	}
 
@@ -14,10 +14,12 @@ class Process {
 
 	tick() {
 		this.cameraMovement()
+
+		for(let human of game.humans) human.tick()
 	}
 
 	cameraMovement() {
-		let speed = 50/game.renderer.camera.zoomValue //(settings.playerSpeed/150)*(world.deltaTick/10)
+		let speed = 20/game.renderer.camera.zoomValue //(settings.playerSpeed/150)*(world.deltaTick/10)
 
 		let keys = game.input.keys
 	

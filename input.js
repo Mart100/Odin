@@ -24,7 +24,21 @@ $(() => {
 	})
 	
 	// click
-	$(document).on('mousedown', (event) => {
+	$('#canvas').on('mousedown', (event) => {
+
+
+		if(event.which == 1) {
+
+			if(selectedTool == 'humanadd') {
+				let pos = game.input.mouseTileHover.clone().floor()
+
+				let human = new Human(pos)
+			}
+
+		}
+
+
+
 
 	})
 
