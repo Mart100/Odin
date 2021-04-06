@@ -6,6 +6,7 @@ class House extends Building {
 		this.size = 4
 		this.cost = { wood: 5 }
 		this.inhabitants = []
+		this.image = assets.images.hut
 
 		nation.houses.push(this)
 	}

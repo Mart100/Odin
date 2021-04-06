@@ -1,7 +1,9 @@
 class Process {
 	constructor() {
 		this.interval
-		this.tickRate = 1000/50
+		this.ticksPerSecond = 50
+		this.tickRate = 1000/this.ticksPerSecond
+		this.tickCount = 0
 
 	}
 
@@ -13,9 +15,16 @@ class Process {
 	}
 
 	tick() {
+
+		this.tickRate += 1
+
 		this.cameraMovement()
 
 		for(let human of game.humans) human.tick()
+
+		for(let nation of game.nations) nation.tick()
+
+		if(this.tickRate % 10) infoBoxes.forEach(ib => { if(ib.updater) ib.update() })
 	}
 
 	cameraMovement() {

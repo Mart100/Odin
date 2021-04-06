@@ -1,11 +1,13 @@
 let assets = {
   images: {
-    human: 'assets/human.png',
+    human_left: 'assets/human-left.png',
+    human_right: 'assets/human-right.png',
     tree: 'assets/tree.png',
     rock: 'assets/rock.png',
     hut: 'assets/hut.png',
     wheat: 'assets/wheat.png',
-    wheatfarm: 'assets/wheatfarm.png',
+    wheatfarm_grown: 'assets/wheatfarm-grown.png',
+    wheatfarm_growing: 'assets/wheatfarm-growing.png',
   },
   sounds: {
     example: './assets/sounds/example.mp3',

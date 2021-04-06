@@ -19,8 +19,8 @@ class Human {
 		this.mating = {
 			partner: null,
 			mateReady: false,
-			mateCooldownMax: 20*50*(Math.random()*2),
-			mateCooldown: 20*50*(Math.random()*2)
+			mateCooldownMax: 50*50*(Math.random()*2),
+			mateCooldown: 50*50*(Math.random()*2)
 		}
 		this.home = null
 		this.building = {
@@ -30,6 +30,7 @@ class Human {
 		this.statusProgress = 0
 		this.nation = null
 		this.saturation = 100
+		this.image = assets.images['human_left']
 
 		game.humans.push(this)
 	}
@@ -80,6 +81,23 @@ class Human {
 		delete this
 
 
+	}
+
+	checkAvailableHouse(join=true) {
+		let availableHouse = null
+
+		for(let house of this.nation.houses) {
+			if(house.inhabitants.length >= house.size) continue
+			availableHouse = house
+		}
+
+		// if not full house found. Join house
+		if(availableHouse && join && this.home == null) {
+			this.home = availableHouse
+			this.home.addHuman(this)
+		}
+
+		return availableHouse
 	}
 
 	async tick() {
@@ -149,7 +167,15 @@ class Human {
 
 				// if no home found, and enough wood. Build new house
 				else if(!availableHouse && this.nation.resources.wood > 10) {
-					let result = await game.grid.findClosestEmptyTile(this.pos.clone().floor())
+					let result = await game.grid.find(this.pos.clone().floor(), (tile, neighbors) => {
+						let tileEmpty = tile.resource == null && tile.building == null
+						let neighborsEmpty = true
+						for(let n of neighbors) {
+							if(n.resource != null || n.building != null) neighborsEmpty = false
+						}
+
+						return tileEmpty && neighborsEmpty
+					})
 					this.status = 'walking'
 					this.walking.designationGoal = 'building'
 					this.building.what = 'house'
@@ -172,6 +198,7 @@ class Human {
 				// see if other home inhabitant is also mateReady
 				for(let human of this.home.inhabitants) {
 					if(human.id == this.id) continue
+					if(human.partner != null) continue
 					if(human.mating.mateReady) {
 						this.mating.partner = human
 						human.mating.partner = this
@@ -211,21 +238,35 @@ class Human {
 
 				}
 
-				// get wheat
-				else if(Math.random() > 1/3) {
-					pathFindingResult = await game.grid.findClosestResource(this.pos.clone().floor(), 'wheat')
-					this.walking.designationGoal = 'farming'
-
-				}
-
 				// get a stone
-				else {
+				else if(Math.random() > 2/3) {
 					pathFindingResult = await game.grid.findClosestResource(this.pos.clone().floor(), 'rock')
 					this.walking.designationGoal = 'mining'
 				}
 
-				this.walking.designation = pathFindingResult.target
-				this.walking.path = pathFindingResult.path
+				// get wheat
+				else if(
+					Math.random() > (this.nation.resources.food/10)/this.nation.population
+				) {
+
+					
+					//pathFindingResult = await game.grid.findClosestResource(this.pos.clone().floor(), 'wheat')
+					pathFindingResult = await game.grid.find(this.pos.clone().floor(), (tile, neighbors) => {
+						return tile.resource == 'wheat' || (tile.building && tile.building.type == 'wheatfarm' && tile.building.isFarmable())
+					})
+					this.walking.designationGoal = 'farming'
+
+				}
+
+
+				if(pathFindingResult) {
+					this.walking.designation = pathFindingResult.target
+					this.walking.path = pathFindingResult.path
+				}
+				else {
+					this.status = null
+				}
+
 			}
 		}
 
@@ -243,6 +284,10 @@ class Human {
 			acceleration.add(this.pos.clone().subtract(center).multiply(-0.1))
 			velocity.add(acceleration.multiply(0.05))
 			if(velocity.getMagnitude() > this.maxSpeed) velocity.setMagnitude(this.maxSpeed)
+
+			if(velocity.x > 0) this.image = assets.images['human_right']
+			else this.image = assets.images['human_left']
+
 			this.pos.add(velocity)
 
 
@@ -259,6 +304,7 @@ class Human {
 
 			if(path == null || path.length == 0) {
 				if(this.walking.designationGoal) this.status = this.walking.designationGoal
+				else this.status = null
 				this.statusProgress = 0
 				return
 			}
@@ -288,6 +334,9 @@ class Human {
 				if(movement.getMagnitude() > this.maxSpeed) movement.setMagnitude(this.maxSpeed)
 				if(totalDistance < 0.05) return this.walking.path = null
 			}
+
+			if(movement.x > 0) this.image = assets.images['human_right']
+			else this.image = assets.images['human_left']
 		
 			//console.log(movement)
 			this.pos.x += movement.x
@@ -298,11 +347,7 @@ class Human {
 			this.statusProgress += 1
 
 			let gridPos = this.pos.clone().floor()
-			
-			if(gridPos.x < 0) return this.status = null
-			if(gridPos.x >= game.grid.width) return this.status = null
-			if(gridPos.y < 0) return this.status = null
-			if(gridPos.y >= game.grid.height) return this.status = null
+			if(game.grid.isOutOfRange(gridPos)) return this.status = null
 
 
 			let treeTile = game.grid.data[gridPos.x][gridPos.y]
@@ -324,11 +369,7 @@ class Human {
 			this.statusProgress += 1
 			
 			let gridPos = this.pos.clone().floor()
-			
-			if(gridPos.x < 0) return this.status = null
-			if(gridPos.x >= game.grid.width) return this.status = null
-			if(gridPos.y < 0) return this.status = null
-			if(gridPos.y >= game.grid.height) return this.status = null
+			if(game.grid.isOutOfRange(gridPos)) return this.status = null
 
 			let rockTile = game.grid.data[gridPos.x][gridPos.y]
 
@@ -349,22 +390,23 @@ class Human {
 			this.statusProgress += 1
 			
 			let gridPos = this.pos.clone().floor()
-			
-			if(gridPos.x < 0) return this.status = null
-			if(gridPos.x >= game.grid.width) return this.status = null
-			if(gridPos.y < 0) return this.status = null
-			if(gridPos.y >= game.grid.height) return this.status = null
+			if(game.grid.isOutOfRange(gridPos)) return this.status = null
 
-			let farmTile = game.grid.data[gridPos.x][gridPos.y]
-
-			if(!farmTile) return this.status = null
-
-			if(farmTile.resource != 'wheat') this.status = null
+			let tile = game.grid.data[gridPos.x][gridPos.y]
+			if(!tile) return this.status = null
 
 			if(this.statusProgress > 100) {
-				farmTile.resource = null
-				this.nation.resources.food += 10
+				if(tile.resource == 'wheat') {
+					tile.resource = null
+					this.nation.resources.food += 10	
+				}
+				if(tile.building && tile.building.type == 'wheatfarm' && tile.building.isFarmable()) {
+					tile.building.farm()
+					this.nation.resources.food += 5	
+				}
+
 				this.status = null
+
 			}
 		}
 
@@ -372,11 +414,7 @@ class Human {
 			this.statusProgress += 1
 
 			let gridPos = this.pos.clone().floor()
-			
-			if(gridPos.x < 0) return this.status = null
-			if(gridPos.x >= game.grid.width) return this.status = null
-			if(gridPos.y < 0) return this.status = null
-			if(gridPos.y >= game.grid.height) return this.status = null
+			if(game.grid.isOutOfRange(gridPos)) return this.status = null
 
 			let buildingTile = game.grid.data[gridPos.x][gridPos.y]
 
@@ -389,6 +427,9 @@ class Human {
 			if(this.statusProgress > 100) {
 
 				if(this.building.what == 'house') {
+
+					// check if other house available
+					if(this.checkAvailableHouse(true)) return this.status = null
 					buildingTile.building = new House(buildingTile.pos, this.nation)
 	
 					this.home = buildingTile.building
@@ -428,7 +469,7 @@ class Human {
 
 			if(!this.mating.mateReady || !partner.mating.mateReady) return this.status = null
 			
-			if(this.pos.clone().subtract(partner.pos).getMagnitude() > 0.5) return
+			if(this.pos.clone().subtract(partner.pos).getMagnitude() > 1) return
 
 			else {
 

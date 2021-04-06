@@ -40,6 +40,7 @@ body {
 #toolbar .content div img {
 	width: 80px;
 	pointer-events: none;
+	image-rendering: crisp-edges;
 }
 
 #toolbar:hover {

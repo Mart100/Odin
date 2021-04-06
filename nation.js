@@ -17,8 +17,19 @@ class Nation {
 		game.nations.push(this)
 	}
 
+	get population() {
+		return this.citizens.length
+	}
+
 	addHuman(human) {
 		this.citizens.push(human)
+	}
+
+	tick() {
+
+
+		// grow farms
+		this.buildings.filter(b => b.type == 'wheatfarm').forEach(b => b.grow())
 	}
 
 	buildingAmountType(type) {

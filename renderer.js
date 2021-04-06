@@ -130,18 +130,41 @@ class Renderer {
 		let grid = game.grid
 		let cameraOffset = new Vector(camera.pos.x%1, camera.pos.y%1)
 
-		let xPos = 0 - cameraOffset.x*zoom + Math.floor((mousePos.x/zoom) + cameraOffset.x)*zoom
-		let yPos = 0 - cameraOffset.y*zoom + Math.floor((mousePos.y/zoom) + cameraOffset.y)*zoom
+		// human hover
+		if(game.input.mouseHumanHover && this.camera.zoomValue > this.viewChange && selectedTool == 'info') {
+			let human = game.input.mouseHumanHover
+			let humanCanvasPos = this.gridToWindowPos(human.pos)
+			humanCanvasPos = humanCanvasPos
 
-		ctx.beginPath()
-		ctx.strokeStyle = 'rgb(0, 0, 0)'
-		ctx.lineWidth = 4
-		ctx.rect(xPos, yPos, zoom, zoom)
-		ctx.stroke()
+			if(humanCanvasPos.x > this.canvas.width) return
+			if(humanCanvasPos.x < 0) return
+			if(humanCanvasPos.y > this.canvas.height) return
+			if(humanCanvasPos.y < 0) return
+	
+			ctx.beginPath()
+			ctx.strokeStyle = 'rgb(255, 0, 0)'
+			ctx.lineWidth = 2
+			ctx.rect(humanCanvasPos.x-zoom/2, humanCanvasPos.y-zoom/2, zoom, zoom)
+			ctx.stroke()
+		}
+
+		// tile hover 
+		else {
+			let xPos = -cameraOffset.x*zoom + Math.floor((mousePos.x/zoom) + cameraOffset.x)*zoom
+			let yPos = -cameraOffset.y*zoom + Math.floor((mousePos.y/zoom) + cameraOffset.y)*zoom
+	
+			ctx.beginPath()
+			ctx.strokeStyle = 'rgb(0, 0, 0)'
+			ctx.lineWidth = 4
+			ctx.rect(xPos, yPos, zoom, zoom)
+			ctx.stroke()
+		}
+		
+
 
 	}
 	drawHuman(human) {
-		let asset = assets.images.human
+		let asset = human.image
 
 		let ctx = this.ctx
 		let camera = this.camera
@@ -154,9 +177,17 @@ class Renderer {
 		if(humanCanvasPos.y > this.canvas.height) return
 		if(humanCanvasPos.y < 0) return
 
-		this.ctx.drawImage(asset, humanCanvasPos.x-zoomValue/(4*2), humanCanvasPos.y-zoomValue/(4*2), zoomValue/4, zoomValue/4)
+		this.ctx.drawImage(asset, humanCanvasPos.x-zoomValue/4, humanCanvasPos.y-zoomValue/4, zoomValue/2, zoomValue/2)
 
-		if(human.walking.path && this.camera.zoomValue > this.viewChange && human.nation && human.nation.citizens.length < 100) {
+		if(
+			human.walking.path 
+			&& this.camera.zoomValue > this.viewChange 
+			&& (
+				( human.nation && human.nation.citizens.length < 100)
+				|| (game.input.mouseHumanHover && game.input.mouseHumanHover.name == human.name && selectedTool == 'info')
+				|| (game.input.mouseHumanHover && human.mating.partner && game.input.mouseHumanHover.name == human.mating.partner.name && selectedTool == 'info')
+				)
+			) {
 			let path = human.walking.path
 			this.ctx.strokeStyle = 'rgb(0, 0, 255)'
 			this.ctx.beginPath()
@@ -190,9 +221,7 @@ class Renderer {
 
 		// draw building
 		if(tile.building) {
-			let asset = assets.images[tile.building.type]
-
-			if(tile.building.type == 'house' && tile.building.level == 1) asset = assets.images['hut']
+			let asset = tile.building.image
 
 			let buildingCanvasPos = tile.pos.clone().subtract(camera.pos).multiply(zoomValue)
 			ctx.drawImage(asset, buildingCanvasPos.x, buildingCanvasPos.y, zoomValue, zoomValue)

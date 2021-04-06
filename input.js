@@ -19,6 +19,41 @@ $(() => {
 		let mouseTileHover = new Vector(xPos, yPos)
 		game.input.mouseTileHover = mouseTileHover
 
+
+		let inHumanBounds = (human) => {
+			let humanPos = game.renderer.gridToWindowPos(human.pos.clone())
+			let zoom = game.renderer.camera.zoomValue
+
+			if(humanPos.x+zoom/2 > mousePos.x
+				&& humanPos.x-zoom/2 < mousePos.x
+				&& humanPos.y+zoom/2 > mousePos.y
+				&& humanPos.y-zoom/2 < mousePos.y) {
+					// yes, hovering over human
+					return true
+				}
+
+			// not hovering over human
+			return false
+		}
+
+
+		// if hover over human. Check if still applies
+		if(game.input.mouseHumanHover) {
+
+			let human = game.input.mouseHumanHover
+			if(!inHumanBounds(human)) game.input.mouseHumanHover = null
+				
+		}
+
+		else {
+			
+			// check if hovering over human
+			for(let human of game.humans) {
+				if(inHumanBounds(human)) game.input.mouseHumanHover = human
+			}
+		}
+
+
 		infoPanel.add('mouseTileX', Math.floor(mouseTileHover.x))
     infoPanel.add('mouseTileY', Math.floor(mouseTileHover.y))
 	})
@@ -29,9 +64,7 @@ $(() => {
 
 		if(event.which == 1) {
 
-			let infoboxes = $('.infobox')
-
-			if(infoboxes.length > 0) $('.infobox')[0].remove()
+			infoBoxes.forEach(ib => ib.destroy())
 
 			if(selectedTool == 'humanadd') {
 				let pos = game.input.mouseTileHover.clone().floor()
@@ -52,11 +85,11 @@ $(() => {
 	
 					infoBox.setTitle(nation.name)
 	
-					infoBox.setContent(`
+					infoBox.setUpdater(() => `
 					<div>Population: ${nation.citizens.length}</div>
 					<div>Chunks: ${nation.chunks.length}</div>
-					<div>Wheatfarms: ${nation.buildings.map(b => b.type=='wheatfarm').reduce((a, b) => a+b)}</div>
-					<div>Houses: ${nation.buildings.map(b => b.type=='house').reduce((a, b) => a+b)}</div>
+					<div>Wheatfarms: ${nation.buildingAmountType('wheatfarm')}</div>
+					<div>Houses: ${nation.buildingAmountType('house')}</div>
 					<div>Inventory:</div>
 					<div>Stone: ${nation.resources.stone}</div>
 					<div>Wood: ${nation.resources.wood}</div>
@@ -65,6 +98,35 @@ $(() => {
 	
 					infoBox.show()
 
+				}
+
+				// small view - show human info
+				if(game.renderer.camera.zoomValue > game.renderer.viewChange && game.input.mouseHumanHover) {
+
+					let human = game.input.mouseHumanHover
+
+					let infoBox = new Infobox()
+	
+					infoBox.setTitle(human.name)
+
+					infoBox.setPosition(game.input.mousePos, false)
+	
+					infoBox.setUpdater(() => `
+					<div>Nation: ${human.nation.name}</div>
+					<div>Saturation: ${Math.round(human.saturation*10)/10}</div>
+					<div>Status: ${human.status}</div>
+					${human.status == 'walking' ? `<div>Goal: ${human.walking.designationGoal}</div>` : ''}
+					${human.walking.path ? `<div>PathLength: ${human.walking.path.length}</div>` : ''}
+					<div>mateReady: ${human.mating.mateReady}</div>
+					${!human.mating.mateReady ? `<div>Mate Cooldown: ${Math.round(human.mating.mateCooldown)}</div>` : ''}
+					${human.mating.partner ? `<div>Partner: ${human.mating.partner.name}</div>` : ''}
+					<div>Home: ${human.home ? human.home.pos.string() : 'homeless'}</div>
+					`)
+
+					infoBox.addContent('<button class="consoleHuman">Console log human</button>')
+					infoBox.element.find('.consoleHuman').on('click', () => { console.log(human) })
+	
+					infoBox.show()
 				}
 
 

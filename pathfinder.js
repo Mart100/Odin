@@ -7,6 +7,7 @@ class Pathfinder {
 		this.target = null
 		this.targetPosition = null
 		this.targetType = null
+		this.qualifyFunction = null
 
 		game.pathFinders.push(this)
 
@@ -15,9 +16,26 @@ class Pathfinder {
 		let idx = game.pathFinders.indexOf(this)
     game.pathFinders.splice(idx, 1)
 	}
+	async find(from, qualifyFunction) {
+
+		this.qualifyFunction = qualifyFunction
+		this.foundEnd = false
+		this.targetType = 'function'
+		this.exploredTiles = []
+		this.exploredTilesVal = []
+		this.iterations = 0
+		this.pathFindStart = Date.now()
+		let path = await this.checkNeighborsRecursion(from.clone(), 0)
+		if(!path) return {path: [], target: from}
+		let reversedPath = path.reverse()
+		this.foundEnd = true
+		return {path: reversedPath, target: this.targetPosition}
+
+	}
 	async findResource(from, resourceType) {
 		//console.log('FindPath: ', from, to)
 		this.foundEnd = false
+		this.qualifyFunction = null
 		this.exploredTiles = []
 		this.exploredTilesVal = []
 		this.target = resourceType
@@ -34,6 +52,7 @@ class Pathfinder {
 	async findEmptyTile(from) {
 		//console.log('FindPath: ', from, to)
 		this.foundEnd = false
+		this.qualifyFunction = null
 		this.exploredTiles = []
 		this.exploredTilesVal = []
 		this.targetType = 'empty'
@@ -49,6 +68,7 @@ class Pathfinder {
 	async findPath(from, to) {
 		//console.log('FindPath: ', from, to)
 		this.foundEnd = false
+		this.qualifyFunction = null
 		this.exploredTiles = []
 		this.exploredTilesVal = []
 		this.target = to.clone()
@@ -74,6 +94,23 @@ class Pathfinder {
 			this.exploredTiles.push(`${tile.pos.x}=${tile.pos.y}`)
 	
 			this.exploredTilesVal[`${tile.pos.x}=${tile.pos.y}`] = iter
+
+			// get tile neighbors
+			let neighbors = this.getTileNeighbors(tilePos)
+			if(neighbors == null) return resolve(false)
+
+			if(this.targetType == 'position') {
+				neighbors.sort((a, b) => {
+					let distA = new Vector(a.pos.x, a.pos.y).subtract(this.target).getMagnitude()
+					let distB = new Vector(b.pos.x, b.pos.y).subtract(this.target).getMagnitude()
+					//console.log(a, distA, b, distB)
+					return distA-distB
+				})		
+			}
+
+			else {
+				neighbors = shuffle(neighbors)
+			}
 			
 			// check if reached position target
 			if(this.targetType == 'position') {
@@ -108,22 +145,14 @@ class Pathfinder {
 				}
 			}
 
-			let neighbors = this.getTileNeighbors(tilePos)
-			//console.log(tilePos, neighbors)
-			if(neighbors == null) return resolve(false)
-
-			if(this.targetType == 'position') {
-				neighbors.sort((a, b) => {
-					let distA = new Vector(a.pos.x, a.pos.y).subtract(this.target).getMagnitude()
-					let distB = new Vector(b.pos.x, b.pos.y).subtract(this.target).getMagnitude()
-					//console.log(a, distA, b, distB)
-					return distA-distB
-				})		
+			else if(this.targetType == 'function' && this.qualifyFunction) {
+				if(this.qualifyFunction(tile, neighbors)) {
+					this.foundEnd = true
+					this.targetPosition = tile.pos.clone()
+					return resolve([tile.pos.clone()])
+				}
 			}
 
-			else {
-				neighbors = shuffle(neighbors)
-			}
 
 			//console.log(neighbors)
 			

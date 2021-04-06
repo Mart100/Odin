@@ -39,13 +39,31 @@ class Grid {
 		
 	}
 
+	isOutOfRange(pos) {
+		if(pos.x < 0) return true
+		if(pos.x >= this.width) return true
+		if(pos.y < 0) return true
+		if(pos.y >= this.height) return true
+
+		return false
+	}
+
+	async find(center, qualifyFunction) {
+		let pathFinder = new Pathfinder()
+		let result = await pathFinder.find(center.clone(), qualifyFunction)
+		pathFinder.destroy()
+
+		let fastPath = await this.findPathToTarget(center.clone(), result.target)
+
+		return fastPath
+	} 
+
 	async findClosestResource(center, resourceType) {
 		let pathFinder = new Pathfinder()
 		let result = await pathFinder.findResource(center.clone(), resourceType)
 		pathFinder.destroy()
 
 		let fastPath = await this.findPathToTarget(center.clone(), result.target)
-		//console.log(fastPath)
 
 		return fastPath
 	}
