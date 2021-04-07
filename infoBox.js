@@ -27,6 +27,7 @@ class Infobox {
 
 	setUpdater(func) {
 		this.updater = func
+		this.update()
 	}
 
 	update() {

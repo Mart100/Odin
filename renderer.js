@@ -23,6 +23,8 @@ class Renderer {
 		let ctx = this.ctx
 		let canvas = this.canvas
 
+		let timeStart = performance.now()
+
 
 		// rerun frame
 		window.requestAnimationFrame(() => { this.frame() })
@@ -54,6 +56,8 @@ class Renderer {
 
 
 		this.drawMouseHover()
+
+		infoPanel.add('frameDur', `${performance.now()-timeStart}ms`)
 
 	}
 
@@ -186,6 +190,7 @@ class Renderer {
 				( human.nation && human.nation.citizens.length < 100)
 				|| (game.input.mouseHumanHover && game.input.mouseHumanHover.name == human.name && selectedTool == 'info')
 				|| (game.input.mouseHumanHover && human.mating.partner && game.input.mouseHumanHover.name == human.mating.partner.name && selectedTool == 'info')
+				|| (game.input.mouseTileHover && human.job && game.input.mouseTileHover.clone().floor().isIdentical(human.job.tile.pos) && selectedTool == 'info')
 				)
 			) {
 			let path = human.walking.path
@@ -210,6 +215,13 @@ class Renderer {
 		let camera = this.camera
 		let zoomValue = camera.zoomValue
 		let grid = game.grid
+
+		let canvasPos = tile.pos.clone().subtract(camera.pos).multiply(zoomValue)
+
+		if(canvasPos.x > this.canvas.width) return
+		if(canvasPos.x < 0) return
+		if(canvasPos.y > this.canvas.height) return
+		if(canvasPos.y < 0) return
 
 		// draw resource
 		if(tile.resource) {

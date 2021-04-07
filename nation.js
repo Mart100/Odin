@@ -8,10 +8,15 @@ class Nation {
 		this.buildings = []
 		this.houses = []
 		this.citizens = []
+		this.jobs = []
 		this.resources = {
 			stone: 0,
 			wood: 0,
 			food: 0
+		}
+		this.ratios = { // 1 building for every x citizens
+			wheatfarm: 10,
+			house: 4
 		}
 
 		game.nations.push(this)

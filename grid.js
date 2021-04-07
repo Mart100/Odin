@@ -18,6 +18,11 @@ class Grid {
 		}
 	}
 
+	getTile(pos) {
+		if(!this.data[pos.x]) return undefined
+		return this.data[pos.x][pos.y]
+	}
+
 	spawnResources() {
 
 		noise.seed(Math.random())

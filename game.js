@@ -1,11 +1,12 @@
 class Game {
 	constructor() {
-		this.grid = new Grid(100, 100)
+		this.grid = new Grid(200, 200)
 		this.renderer = new Renderer()
 		this.process = new Process()
 		this.humans = []
 		this.nations = []
 		this.pathFinders = []
+		this.paused = false
 
 		this.input = {
 			keys: {},

@@ -8,6 +8,7 @@ class Pathfinder {
 		this.targetPosition = null
 		this.targetType = null
 		this.qualifyFunction = null
+		this.maxLength = 50
 
 		game.pathFinders.push(this)
 
@@ -26,6 +27,7 @@ class Pathfinder {
 		this.iterations = 0
 		this.pathFindStart = Date.now()
 		let path = await this.checkNeighborsRecursion(from.clone(), 0)
+		if(path == 'max') return {path: [], target: from}
 		if(!path) return {path: [], target: from}
 		let reversedPath = path.reverse()
 		this.foundEnd = true
@@ -43,6 +45,7 @@ class Pathfinder {
 		this.iterations = 0
 		this.pathFindStart = Date.now()
 		let path = await this.checkNeighborsRecursion(from.clone(), 0)
+		if(path == 'max') return {path: [], target: from}
 		if(!path) return {path: [], target: from}
 		let reversedPath = path.reverse()
 		//console.log(`Found Path between`, from, 'and', to, `. within ${Date.now()-this.pathFindStart} ms. Path length: ${path.length}. Tiles: ${this.exploredTiles.length}`)
@@ -59,6 +62,7 @@ class Pathfinder {
 		this.iterations = 0
 		this.pathFindStart = Date.now()
 		let path = await this.checkNeighborsRecursion(from.clone(), 0)
+		if(path == 'max') return {path: [], target: from}
 		if(!path) return {path: [], target: from}
 		let reversedPath = path.reverse()
 		//console.log(`Found Path between`, from, 'and', to, `. within ${Date.now()-this.pathFindStart} ms. Path length: ${path.length}. Tiles: ${this.exploredTiles.length}`)
@@ -76,6 +80,7 @@ class Pathfinder {
 		this.iterations = 0
 		this.pathFindStart = Date.now()
 		let path = await this.checkNeighborsRecursion(from.clone(), 0)
+		if(path == 'max') return {path: [], target: from}
 		if(!path) return {path: [], target: from}
 		let reversedPath = path.reverse()
 		//console.log(`Found Path between`, from, 'and', to, `. within ${Date.now()-this.pathFindStart} ms. Path length: ${path.length}. Tiles: ${this.exploredTiles.length}`)
@@ -86,7 +91,7 @@ class Pathfinder {
 		return new Promise((resolve, reject) => {
 			if(this.foundEnd) return resolve(false)
 			this.iterations = iter
-			if(this.exploredTiles.length > 200) return resolve(false)
+			if(this.exploredTiles.length > this.maxLength) return resolve('max')
 			if(!game.grid.data[tilePos.x]) return resolve(false)
 			let tile = game.grid.data[tilePos.x][tilePos.y]
 			if(!tile) return resolve(false)
@@ -165,7 +170,10 @@ class Pathfinder {
 				if(this.exploredTiles.includes(`${nPos.x}=${nPos.y}`)) continue
 				//console.log(n, nPos)
 				this.checkNeighborsRecursion(nPos, iter+1).then((response) => {
-					if(response) {
+					if(response == 'max') {
+						return resolve('max')
+					}
+					else if(response) {
 						let leastIterVal = 1e9
 						let leastIterPos = nPos
 						for(let j=0;j<neighbors.length;j++) {

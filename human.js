@@ -6,6 +6,7 @@ class Human {
 		this.name = this.randomName()
 		this.maxSpeed = 0.05
 		this.id = this.name.hashCode()
+		this.job = null
 		
 		this.wandering = {
 			velocity: new Vector(1, 1).rotate(Math.random()*Math.PI*2),
@@ -170,17 +171,26 @@ class Human {
 					let result = await game.grid.find(this.pos.clone().floor(), (tile, neighbors) => {
 						let tileEmpty = tile.resource == null && tile.building == null
 						let neighborsEmpty = true
-						for(let n of neighbors) {
-							if(n.resource != null || n.building != null) neighborsEmpty = false
-						}
-
+						for(let n of neighbors) if(n && (n.resource != null || n.building != null)) neighborsEmpty = false
 						return tileEmpty && neighborsEmpty
 					})
-					this.status = 'walking'
-					this.walking.designationGoal = 'building'
-					this.building.what = 'house'
-					this.walking.designation = result.target
-					this.walking.path = result.path
+					if(result) {
+						this.status = 'walking'
+						this.walking.designationGoal = 'building'
+						this.building.what = 'house'
+						this.building.location = result.target
+						this.walking.designation = result.target
+						this.walking.path = result.path
+
+						let targetTile = game.grid.getTile(result.target)
+						if(targetTile) {
+							let job = new Job(this, 'building', result.path)
+							targetTile.addJob(job)
+							this.job?.finished()
+							this.job = job
+						}
+					}
+
 				}
 
 			}
@@ -211,18 +221,45 @@ class Human {
 					this.walking.designationGoal = 'mating'
 					this.walking.designation = result.target
 					this.walking.path = result.path
+
+					let targetTile = game.grid.getTile(result.target)
+					if(targetTile) {
+						let job = new Job(this, 'mating', result.path)
+						targetTile.addJob(job)
+						this.job?.finished()
+						this.job = job
+					}
+
+					
 				}
 
 			}
 
 			// make buildings
 			else if(Math.random() > 0.9 && this.nation.citizens.length/20 > this.nation.buildingAmountType('wheatfarm') && this.nation.resources.food < 1000) {
-				let result = await game.grid.findClosestEmptyTile(this.pos.clone().floor())
-				this.status = 'walking'
-				this.walking.designationGoal = 'building'
-				this.building.what = 'wheatfarm'
-				this.walking.designation = result.target
-				this.walking.path = result.path
+				let result = await game.grid.find(this.pos.clone().floor(), (tile, neighbors) => {
+					let tileEmpty = tile.resource == null && tile.building == null && tile.jobs.length == 0
+					let neighborsEmpty = true
+					for(let n of neighbors) if(n && (n.resource != null || n.building != null) && (n.building && n.building.type != 'wheatfarm')) neighborsEmpty = false
+					return tileEmpty && neighborsEmpty
+				})
+				if(result) {
+					this.status = 'walking'
+					this.walking.designationGoal = 'building'
+					this.building.location = result.target
+					this.building.what = 'wheatfarm'
+					this.walking.designation = result.target
+					this.walking.path = result.path
+
+					let targetTile = game.grid.getTile(result.target)
+					if(targetTile) {
+						let job = new Job(this, 'building', result.path)
+						targetTile.addJob(job)
+						this.job?.finished()
+						this.job = job
+					}
+				}
+
 			}
 
 			// get resources
@@ -249,17 +286,45 @@ class Human {
 					Math.random() > (this.nation.resources.food/10)/this.nation.population
 				) {
 
-					
-					//pathFindingResult = await game.grid.findClosestResource(this.pos.clone().floor(), 'wheat')
-					pathFindingResult = await game.grid.find(this.pos.clone().floor(), (tile, neighbors) => {
-						return tile.resource == 'wheat' || (tile.building && tile.building.type == 'wheatfarm' && tile.building.isFarmable())
-					})
-					this.walking.designationGoal = 'farming'
+					let wheatFarmCount = this.nation.buildingAmountType('wheatfarm')
+					let ratios = this.nation.ratios
+					let wheatFarmRatio = (this.nation.population/ratios.wheatfarm)/(wheatFarmCount) // 0: no wheatfarms; 1: good amount wheatfarms
+					let available_wheatfarms = this.nation.buildings.filter(b => b.type == 'wheatfarm' && b.isFarmable() && b.tile.jobs.length == 0)
+
+
+					// get wheat from natural source
+					if(Math.random() > wheatFarmRatio || available_wheatfarms.length == 0) {
+						pathFindingResult = await game.grid.find(this.pos.clone().floor(), (tile, neighbors) => {
+							return tile.resource == 'wheat'
+						})
+						this.walking.designationGoal = 'farming'
+					}
+
+					// otherwise get from wheat farm
+					else {
+						let disFromFarm = (farm) => this.pos.clone().subtract(farm.pos).getMagnitude()
+						let closestWheatfarm = available_wheatfarms.sort((a, b) => disFromFarm(a)-disFromFarm(b))[0]
+						pathFindingResult = await game.grid.findPathToTarget(this.pos.clone().floor(), closestWheatfarm.pos.clone())
+						this.walking.designationGoal = 'farming'
+
+
+
+					}
 
 				}
 
 
 				if(pathFindingResult) {
+
+					let targetTile = game.grid.getTile(pathFindingResult.target)
+					if(targetTile) {
+						let job = new Job(this, this.walking.designationGoal, pathFindingResult.path)
+						targetTile.addJob(job)
+						this.job?.finished()
+						this.job = job
+					}
+
+
 					this.walking.designation = pathFindingResult.target
 					this.walking.path = pathFindingResult.path
 				}
@@ -346,6 +411,11 @@ class Human {
 		if(this.status == 'chopping') {
 			this.statusProgress += 1
 
+			if(!this.job) return this.status = null
+
+			// check if in reach
+			if(this.pos.clone().subtract(this.job.tile.pos).getMagnitude() > 1) return this.status = null
+
 			let gridPos = this.pos.clone().floor()
 			if(game.grid.isOutOfRange(gridPos)) return this.status = null
 
@@ -362,11 +432,17 @@ class Human {
 				treeTile.resource = null
 				this.nation.resources.wood += 5
 				this.status = null
+				this.job?.finished()
 			}
 		}
 
 		if(this.status == 'mining') {
 			this.statusProgress += 1
+
+			if(!this.job) return this.status = null
+
+			// check if in reach
+			if(this.pos.clone().subtract(this.job.tile.pos).getMagnitude() > 1) return this.status = null
 			
 			let gridPos = this.pos.clone().floor()
 			if(game.grid.isOutOfRange(gridPos)) return this.status = null
@@ -383,11 +459,18 @@ class Human {
 				rockTile.resource = null
 				this.nation.resources.stone += 5
 				this.status = null
+				this.job?.finished()
 			}
 		}
 
 		if(this.status == 'farming') {
 			this.statusProgress += 1
+
+			if(!this.job) return this.status = null
+
+			
+			// check if in reach
+			if(this.pos.clone().subtract(this.job.tile.pos).getMagnitude() > 1) return this.status = null
 			
 			let gridPos = this.pos.clone().floor()
 			if(game.grid.isOutOfRange(gridPos)) return this.status = null
@@ -406,12 +489,18 @@ class Human {
 				}
 
 				this.status = null
+				this.job?.finished()
 
 			}
 		}
 
 		if(this.status == 'building') {
 			this.statusProgress += 1
+
+			if(!this.job) return this.status = null
+
+			// check if in reach of where to build
+			if(this.pos.clone().subtract(this.building.location).getMagnitude() > 1) return this.status = null
 
 			let gridPos = this.pos.clone().floor()
 			if(game.grid.isOutOfRange(gridPos)) return this.status = null
@@ -426,18 +515,20 @@ class Human {
 
 			if(this.statusProgress > 100) {
 
+				this.job?.finished()
+
 				if(this.building.what == 'house') {
 
 					// check if other house available
 					if(this.checkAvailableHouse(true)) return this.status = null
-					buildingTile.building = new House(buildingTile.pos, this.nation)
+					buildingTile.building = new House(buildingTile, this.nation)
 	
 					this.home = buildingTile.building
 					buildingTile.building.inhabitants.push(this)
 				}
 
 				else if(this.building.what == 'wheatfarm') {
-					buildingTile.building = new WheatFarm(buildingTile.pos, this.nation)
+					buildingTile.building = new WheatFarm(buildingTile, this.nation)
 
 				}
 
@@ -489,6 +580,8 @@ class Human {
 
 				this.mating.mateCooldown = this.mating.mateCooldownMax
 				partner.mating.mateCooldown = this.mating.partner.mating.mateCooldownMax
+
+				this.job?.finished()
 			}
 		}
 

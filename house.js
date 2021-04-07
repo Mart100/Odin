@@ -1,6 +1,6 @@
 class House extends Building {
-	constructor(pos, nation) {
-		super(pos, nation)
+	constructor(tile, nation) {
+		super(tile, nation)
 		this.type = 'house'
 		this.level = 1
 		this.size = 4

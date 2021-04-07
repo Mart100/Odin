@@ -5,6 +5,8 @@ class Process {
 		this.tickRate = 1000/this.ticksPerSecond
 		this.tickCount = 0
 
+		this.averageTickDuration = 0
+
 	}
 
 	start() {
@@ -16,6 +18,10 @@ class Process {
 
 	tick() {
 
+		if(game.paused) return
+
+		let timeStart = performance.now()
+
 		this.tickRate += 1
 
 		this.cameraMovement()
@@ -25,6 +31,10 @@ class Process {
 		for(let nation of game.nations) nation.tick()
 
 		if(this.tickRate % 10) infoBoxes.forEach(ib => { if(ib.updater) ib.update() })
+
+		let tickDuration = performance.now()-timeStart
+		this.averageTickDuration = (tickDuration+this.averageTickDuration*9)/10
+		infoPanel.add('tickDur', `${this.averageTickDuration}ms`)
 	}
 
 	cameraMovement() {

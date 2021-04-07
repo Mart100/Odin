@@ -1,6 +1,6 @@
 class WheatFarm extends Building {
-	constructor(pos, nation) {
-		super(pos, nation)
+	constructor(tile, nation) {
+		super(tile, nation)
 		this.type = 'wheatfarm'
 		this.cost = { wood: 5, stone: 5 }
 		this.growth = 0 // 0 - 100
@@ -19,5 +19,6 @@ class WheatFarm extends Building {
 	}
 	farm() {
 		this.growth = 0
+		this.job = null
 	}
 }

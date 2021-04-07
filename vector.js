@@ -103,7 +103,7 @@ class Vector {
 		return magnitude
 	}
 	isIdentical(vec1) {
-		return this.clone().subtract(vec1).getMagnitude() == 0
+		return vec1.x == this.x && vec1.y == this.y
 	}
 	dotProduct(vec1) {
 		return this.x*vec1.x + this.y*vec1.y

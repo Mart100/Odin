@@ -3,6 +3,14 @@ $(() => {
 	$(document).on('keydown', (event) => { game.input.keys[event.keyCode] = true })
 	$(document).on('keyup', (event) => { game.input.keys[event.keyCode] = false })
 
+	$(document).on('keypress', (event) => {
+
+		// P - pause
+		if(event.key == 'p') {
+			game.paused = !game.paused
+		}
+	})
+
 
 	// mouse
 	$(document).on('mousemove', (event) => {
@@ -24,10 +32,10 @@ $(() => {
 			let humanPos = game.renderer.gridToWindowPos(human.pos.clone())
 			let zoom = game.renderer.camera.zoomValue
 
-			if(humanPos.x+zoom/2 > mousePos.x
-				&& humanPos.x-zoom/2 < mousePos.x
-				&& humanPos.y+zoom/2 > mousePos.y
-				&& humanPos.y-zoom/2 < mousePos.y) {
+			if(humanPos.x+zoom/3 > mousePos.x
+				&& humanPos.x-zoom/3 < mousePos.x
+				&& humanPos.y+zoom/3 > mousePos.y
+				&& humanPos.y-zoom/3 < mousePos.y) {
 					// yes, hovering over human
 					return true
 				}
@@ -125,6 +133,36 @@ $(() => {
 
 					infoBox.addContent('<button class="consoleHuman">Console log human</button>')
 					infoBox.element.find('.consoleHuman').on('click', () => { console.log(human) })
+	
+					infoBox.show()
+				}
+
+
+				// small view - show tile info
+				else if(game.renderer.camera.zoomValue > game.renderer.viewChange && game.input.mouseTileHover) {
+
+					let tile = game.grid.getTile(game.input.mouseTileHover.clone().floor())
+
+					if(tile.building == null && tile.resource == null) return
+
+					let infoBox = new Infobox()
+					infoBox.setTitle(`Tile (${tile.pos.string()})`)
+
+					infoBox.setPosition(game.renderer.gridToWindowPos(tile.pos.clone().add(new Vector(1, 1))), false)
+	
+					infoBox.setUpdater(() => `
+					<div>Resource: ${tile.resource}</div>
+					<div>Jobs: ${tile.jobs.length}</div>
+					${tile.building ? 
+						`<div>Type: ${tile.building.type}</div>
+						${tile.building.type == 'house' ? `<div>Inhabitants: ${tile.building.inhabitants.length}</div>` : ''}
+						${tile.building.type == 'wheatfarm' ? `<div>Growth: ${tile.building.growth}</div>` : ''}`
+					: ''}
+
+					`)
+
+					infoBox.addContent('<button class="consoleTile">Console log tile</button>')
+					infoBox.element.find('.consoleTile').on('click', () => { console.log(tile) })
 	
 					infoBox.show()
 				}
