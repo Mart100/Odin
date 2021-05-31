@@ -7,10 +7,12 @@ class Human {
 		this.maxSpeed = 0.05
 		this.id = this.name.hashCode()
 		this.job = null
+		this.failedJobCount = 0
 		
 		this.wandering = {
 			velocity: new Vector(1, 1).rotate(Math.random()*Math.PI*2),
-			center: this.pos.clone()
+			center: this.pos.clone(),
+			lock: 100*Math.random()
 		}
 		this.walking = {
 			path: [],
@@ -104,6 +106,8 @@ class Human {
 	async tick() {
 		this.age += 1
 
+		if(this.age > 10000) this.die()
+
 		this.mating.mateCooldown -= 1
 
 		this.saturation -= 0.1
@@ -147,7 +151,7 @@ class Human {
 
 		}
 		
-		if(this.status == 'wandering') {
+		if(this.status == 'wandering' && this.wandering.lock < 1) {
 
 			// no house :(
 			if(this.home == null && Math.random() > 0.9) {
@@ -172,6 +176,7 @@ class Human {
 						let tileEmpty = tile.resource == null && tile.building == null
 						let neighborsEmpty = true
 						for(let n of neighbors) if(n && (n.resource != null || n.building != null)) neighborsEmpty = false
+						if(Math.random() > 0.1) return false
 						return tileEmpty && neighborsEmpty
 					})
 					if(result) {
@@ -235,12 +240,21 @@ class Human {
 
 			}
 
-			// make buildings
-			else if(Math.random() > 0.9 && this.nation.citizens.length/20 > this.nation.buildingAmountType('wheatfarm') && this.nation.resources.food < 1000) {
+			// make wheatfarm
+			else if(Math.random() > 0.9 
+			&& this.nation.citizens.length/20 > this.nation.buildingAmountType('wheatfarm') 
+			&& this.nation.resources.food < 1000) {
 				let result = await game.grid.find(this.pos.clone().floor(), (tile, neighbors) => {
 					let tileEmpty = tile.resource == null && tile.building == null && tile.jobs.length == 0
 					let neighborsEmpty = true
-					for(let n of neighbors) if(n && (n.resource != null || n.building != null) && (n.building && n.building.type != 'wheatfarm')) neighborsEmpty = false
+					let neighborFarm = false
+					for(let n of neighbors) {
+						if(n == undefined) continue
+						if(n.building && n.building.type == 'wheatfarm') neighborFarm = true
+						if(n && (n.resource != null || n.building != null) && (n.building && n.building.type != 'wheatfarm')) neighborsEmpty = false
+					}
+
+					if(!neighborFarm) return Math.random()>0.9
 					return tileEmpty && neighborsEmpty
 				})
 				if(result) {
@@ -262,23 +276,29 @@ class Human {
 
 			}
 
+			// make tree farm
+			else if(Math.random() > 0.9) {
+
+			}
+
 			// get resources
 			else if(Math.random() > 0.9) {
 
 				this.status = 'walking'
 				let pathFindingResult
+				let designationGoal = 'wandering'
 				
 				// get a tree
 				if(Math.random() > 2/3) {
 					pathFindingResult = await game.grid.findClosestResource(this.pos.clone().floor(), 'tree')
-					this.walking.designationGoal = 'chopping'
+					designationGoal = 'chopping'
 
 				}
 
 				// get a stone
 				else if(Math.random() > 2/3) {
 					pathFindingResult = await game.grid.findClosestResource(this.pos.clone().floor(), 'rock')
-					this.walking.designationGoal = 'mining'
+					designationGoal = 'mining'
 				}
 
 				// get wheat
@@ -297,7 +317,9 @@ class Human {
 						pathFindingResult = await game.grid.find(this.pos.clone().floor(), (tile, neighbors) => {
 							return tile.resource == 'wheat'
 						})
-						this.walking.designationGoal = 'farming'
+						designationGoal = 'farming'
+
+						
 					}
 
 					// otherwise get from wheat farm
@@ -305,9 +327,7 @@ class Human {
 						let disFromFarm = (farm) => this.pos.clone().subtract(farm.pos).getMagnitude()
 						let closestWheatfarm = available_wheatfarms.sort((a, b) => disFromFarm(a)-disFromFarm(b))[0]
 						pathFindingResult = await game.grid.findPathToTarget(this.pos.clone().floor(), closestWheatfarm.pos.clone())
-						this.walking.designationGoal = 'farming'
-
-
+						designationGoal = 'farming'
 
 					}
 
@@ -317,16 +337,34 @@ class Human {
 				if(pathFindingResult) {
 
 					let targetTile = game.grid.getTile(pathFindingResult.target)
+					
 					if(targetTile) {
-						let job = new Job(this, this.walking.designationGoal, pathFindingResult.path)
-						targetTile.addJob(job)
-						this.job?.finished()
-						this.job = job
+
+						if(pathFindingResult.path.length > 1) {
+							this.walking.designationGoal = designationGoal
+
+							let job = new Job(this, this.walking.designationGoal, pathFindingResult.path)
+							targetTile.addJob(job)
+							this.job?.finished()
+							this.job = job
+	
+							this.failedJobCount = 0
+							this.walking.designation = pathFindingResult.target
+							this.walking.path = pathFindingResult.path
+						}
+						else {
+							pathFindingResult = undefined
+							this.failedJobCount += 1
+							if(this.failedJobCount > 4) {
+								this.wandering.lock = 100
+								this.failedJobCOunt = 0
+							}
+						}
+
+
 					}
 
 
-					this.walking.designation = pathFindingResult.target
-					this.walking.path = pathFindingResult.path
 				}
 				else {
 					this.status = null
@@ -337,6 +375,10 @@ class Human {
 
 		if(this.status == 'wandering') {
 			
+			// wandering lock
+			if(this.wandering.lock >= 0) {
+				this.wandering.lock -= 1
+			}
 			
 			noise.seed(this.id/116425210)
 			

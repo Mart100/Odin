@@ -14,9 +14,12 @@ $(() => {
 
 	// mouse
 	$(document).on('mousemove', (event) => {
+
 		let mousePos = new Vector(event.clientX, event.clientY)
 
 		game.input.mousePos = mousePos
+
+		if(game.input.mouseHumanHoverLock) return
 
 
 		let camera = game.renderer.camera
@@ -72,10 +75,23 @@ $(() => {
 
 		if(event.which == 1) {
 
+			if(game.input.mouseHumanHoverLock) { 
+				game.input.mouseHumanHoverLock = false
+				game.input.mouseHumanHover = null
+				return
+			}
+
+
 			infoBoxes.forEach(ib => ib.destroy())
 
 			if(selectedTool == 'humanadd') {
 				let pos = game.input.mouseTileHover.clone().floor()
+
+				if(pos.x > game.grid.width) return
+				if(pos.x < 0) return
+				if(pos.y > game.grid.height) return
+				if(pos.y < 0) return
+
 
 				let human = new Human(pos)
 			}
@@ -112,6 +128,7 @@ $(() => {
 				if(game.renderer.camera.zoomValue > game.renderer.viewChange && game.input.mouseHumanHover) {
 
 					let human = game.input.mouseHumanHover
+					game.input.mouseHumanHoverLock = true
 
 					let infoBox = new Infobox()
 	
@@ -121,6 +138,7 @@ $(() => {
 	
 					infoBox.setUpdater(() => `
 					<div>Nation: ${human.nation.name}</div>
+					<div>Age: ${human.age}
 					<div>Saturation: ${Math.round(human.saturation*10)/10}</div>
 					<div>Status: ${human.status}</div>
 					${human.status == 'walking' ? `<div>Goal: ${human.walking.designationGoal}</div>` : ''}

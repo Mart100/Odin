@@ -14,8 +14,12 @@ class Nation {
 			wood: 0,
 			food: 0
 		}
+		this.futureResources = {
+			stone: 0,
+			wood: 0
+		}
 		this.ratios = { // 1 building for every x citizens
-			wheatfarm: 10,
+			wheatfarm: 5,
 			house: 4
 		}
 
